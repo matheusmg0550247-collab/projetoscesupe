@@ -9,17 +9,24 @@ import base64
 # --- Configuração da Página ---
 st.set_page_config(page_title="Gestão Kanban AURA", page_icon="🚀", layout="wide")
 
-# --- CSS Personalizado (Visual "Premium") ---
+# --- CSS Personalizado (Visual "Premium" + Correções) ---
 st.markdown("""
 <style>
-    /* 1. ESTILO DO POPOVER (AUMENTAR LARGURA) */
-    /* Isso força o container interno do popover a ser mais largo */
+    /* 1. AUMENTAR LARGURA DO POPOVER */
     [data-testid="stPopoverBody"] {
-        min-width: 650px !important;
-        max-width: 900px !important;
+        min-width: 600px !important;
+        max-width: 800px !important;
     }
 
-    /* 2. TABELA DENTRO DO POPOVER */
+    /* 2. CONTAINER COM SCROLL PARA A TABELA */
+    .table-wrapper {
+        max-height: 350px; /* Altura máxima antes de rolar */
+        overflow-y: auto;  /* Barra de rolagem se necessário */
+        border: 1px solid #eee;
+        border-radius: 8px;
+    }
+
+    /* 3. ESTILO DA TABELA */
     .popover-table {
         width: 100%;
         border-collapse: collapse;
@@ -27,51 +34,54 @@ st.markdown("""
         font-size: 13px;
     }
     .popover-table th {
-        background-color: #f0f2f6;
-        color: #31333F;
+        background-color: #f8f9fa;
+        color: #333;
         font-weight: 600;
-        padding: 8px;
+        padding: 10px;
         text-align: left;
         border-bottom: 2px solid #ddd;
+        position: sticky; /* Cabeçalho fixo ao rolar */
+        top: 0;
+        z-index: 1;
     }
     .popover-table td {
-        padding: 10px 8px;
+        padding: 8px 10px;
         border-bottom: 1px solid #eee;
         vertical-align: middle;
+        background-color: white;
     }
     
-    /* 3. BADGES DE STATUS (Pílulas Coloridas) */
+    /* 4. BADGES E BARRA DE PROGRESSO */
     .badge {
-        padding: 4px 10px;
-        border-radius: 12px;
+        padding: 3px 8px;
+        border-radius: 10px;
         font-weight: bold;
-        font-size: 11px;
+        font-size: 10px;
         text-transform: uppercase;
         color: white;
         display: inline-block;
+        min-width: 70px;
         text-align: center;
-        min-width: 80px;
     }
-    .bg-todo { background-color: #d9534f; } /* Vermelho */
-    .bg-doing { background-color: #f0ad4e; } /* Laranja */
-    .bg-done { background-color: #5cb85c; }  /* Verde */
+    .bg-todo { background-color: #d9534f; }
+    .bg-doing { background-color: #f0ad4e; }
+    .bg-done { background-color: #5cb85c; }
 
-    /* 4. BARRA DE PROGRESSO COM DEGRADÊ */
     .prog-track {
         background-color: #e9ecef;
-        border-radius: 10px;
-        height: 8px;
-        width: 100px;
-        display: inline-block;
+        border-radius: 8px;
+        height: 6px;
+        width: 100%;
+        min-width: 80px;
+        display: block;
     }
     .prog-fill {
         height: 100%;
-        border-radius: 10px;
-        /* O Segredo do Degradê: Vermelho -> Laranja -> Verde */
-        background: linear-gradient(90deg, #ff4b4b 0%, #f0ad4e 50%, #5cb85c 100%);
+        border-radius: 8px;
+        background: linear-gradient(90deg, #ff4b4b 0%, #f0ad4e 60%, #5cb85c 100%);
     }
 
-    /* 5. AVATARES E BOTÕES (Mantendo o estilo anterior) */
+    /* 5. OUTROS ESTILOS GERAIS */
     [data-testid="column"] { display: flex; flex-direction: column; alignItems: center; justifyContent: flex-start; }
     .avatar-img { border-radius: 50%; width: 75px; height: 75px; object-fit: cover; border: 2px solid #f0f2f6; box-shadow: 0 3px 6px rgba(0,0,0,0.1); margin-bottom: 5px; transition: transform 0.2s; }
     .avatar-img:hover { transform: scale(1.08); border-color: #ff4b4b; }
@@ -157,38 +167,52 @@ def update_full_task(task_id, title, desc, owner_list, start_d, end_d, progress)
 def custom_progress_bar(value, color):
     return f"""<div style="width: 100%; background-color: #e0e0e0; border-radius: 5px; height: 10px; margin-top: 5px; margin-bottom: 5px;"><div style="width: {value}%; background-color: {color}; height: 10px; border-radius: 5px;"></div></div>"""
 
-# --- NOVA FUNÇÃO: GERA TABELA HTML PARA O POPOVER ---
+# --- GERA TABELA HTML PARA O POPOVER (CORRIGIDO) ---
 def generate_popover_table(df_user):
-    html = """<table class="popover-table"><thead><tr><th>Atividade</th><th>Status</th><th>Progresso (Degradê)</th><th>Prazo</th></tr></thead><tbody>"""
+    # ATENÇÃO: String sem indentação para evitar bug de código
+    html = """
+<div class="table-wrapper">
+<table class="popover-table">
+<thead>
+    <tr>
+        <th style="width:40%">Atividade</th>
+        <th style="width:20%">Status</th>
+        <th style="width:25%">Progresso</th>
+        <th style="width:15%">Prazo</th>
+    </tr>
+</thead>
+<tbody>"""
     
     for _, row in df_user.iterrows():
-        # Lógica da Classe CSS do Status
         badge_class = "bg-doing"
         if row['status'] == "Concluído": badge_class = "bg-done"
         if row['status'] == "Não Iniciado": badge_class = "bg-todo"
         
-        # Formata Data
-        prazo = pd.to_datetime(row['end_date']).strftime('%d/%m/%Y') if row['end_date'] else "-"
+        prazo = pd.to_datetime(row['end_date']).strftime('%d/%m') if row['end_date'] else "-"
         
+        # Monta a linha sem indentação excessiva
         html += f"""
-        <tr>
-            <td style="font-weight:500;">{row['title']}</td>
-            <td><span class="badge {badge_class}">{row['status']}</span></td>
-            <td>
-                <div style="display:flex; align-items:center;">
-                    <div class="prog-track">
-                        <div class="prog-fill" style="width: {row['progress']}%;"></div>
-                    </div>
-                    <span style="margin-left:8px; font-size:11px; color:#666;">{row['progress']}%</span>
+    <tr>
+        <td style="font-weight:500;">{row['title']}</td>
+        <td style="text-align:center;"><span class="badge {badge_class}">{row['status']}</span></td>
+        <td>
+            <div style="display:flex; align-items:center;">
+                <div class="prog-track">
+                    <div class="prog-fill" style="width: {row['progress']}%;"></div>
                 </div>
-            </td>
-            <td style="color:#555;">{prazo}</td>
-        </tr>
-        """
-    html += "</tbody></table>"
+                <span style="margin-left:6px; font-size:10px; color:#666;">{row['progress']}%</span>
+            </div>
+        </td>
+        <td style="color:#555;">{prazo}</td>
+    </tr>"""
+    
+    html += """
+</tbody>
+</table>
+</div>"""
     return html
 
-# --- FUNÇÃO HTML REPORT PARA DOWNLOAD ---
+# --- FUNÇÃO HTML REPORT ---
 def generate_html_report(project_name, metrics, tasks_df):
     rows_html = ""
     tasks_df = tasks_df.sort_values(by="end_date")
