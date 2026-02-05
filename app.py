@@ -9,26 +9,54 @@ import base64
 # --- Configuração da Página ---
 st.set_page_config(page_title="Gestão Kanban AURA", page_icon="🚀", layout="wide")
 
-# --- CSS Personalizado ---
+# --- CSS Personalizado (Estilos) ---
 st.markdown("""
 <style>
-    /* Avatar Redondo na Tela Principal */
-    .avatar-container {
-        display: flex;
-        flex-direction: column;
+    /* Centraliza a coluna do Avatar */
+    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
         align-items: center;
-        justify-content: center;
-        margin-bottom: 5px;
     }
+
+    /* Estilo da Imagem Redonda (Avatar) */
     .avatar-img {
         border-radius: 50%;
-        width: 65px;
-        height: 65px;
+        width: 80px; /* Aumentei um pouco para destaque */
+        height: 80px;
         object-fit: cover;
-        border: 2px solid #e6e6e6;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 3px solid #f0f2f6; /* Borda suave */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 8px; /* Espaço entre foto e botão */
+        transition: transform 0.2s;
+    }
+    .avatar-img:hover {
+        transform: scale(1.05);
+        border-color: #ff4b4b;
     }
     
+    /* Centralizar Container da Imagem */
+    .avatar-container {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+
+    /* Estilizando o Botão do Popover (Nome) para parecer clean */
+    div.stPopover button {
+        background-color: transparent;
+        border: 1px solid #e6e6e6;
+        color: #31333F;
+        font-weight: 600;
+        width: 100%;
+        border-radius: 20px;
+        padding: 2px 10px;
+        transition: all 0.3s;
+    }
+    div.stPopover button:hover {
+        border-color: #ff4b4b;
+        color: #ff4b4b;
+        background-color: #fff;
+    }
+
     /* Mini Avatar dentro do Card */
     .mini-avatar {
         border-radius: 50%;
@@ -45,10 +73,6 @@ st.markdown("""
     .header-doing {color: #f0ad4e; border-bottom: 3px solid #f0ad4e; padding-bottom: 5px;}
     .header-done {color: #5cb85c; border-bottom: 3px solid #5cb85c; padding-bottom: 5px;}
     
-    /* Botões */
-    div.stButton > button {
-        border-radius: 20px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -77,14 +101,12 @@ supabase = init_connection()
 
 # --- Funções de Imagem ---
 def get_image_path(name):
-    """Retorna o caminho do arquivo se existir, ou None"""
     filename = IMAGE_MAP.get(name) or IMAGE_MAP.get(name.split(" ")[0])
     if filename and os.path.exists(filename):
         return filename
     return None
 
 def get_image_base64_html(name):
-    """Retorna tag HTML com imagem em base64 para ícones redondos"""
     path = get_image_path(name)
     if path:
         with open(path, "rb") as f:
@@ -93,7 +115,6 @@ def get_image_base64_html(name):
     return None
 
 def get_mini_avatar_html(owner_string):
-    """Gera miniaturas para os cards"""
     if not owner_string: return ""
     html = ""
     owners = [o.strip() for o in owner_string.split("/")]
@@ -141,32 +162,25 @@ def custom_progress_bar(value, color):
     </div>
     """
 
-# --- GERADOR DE HTML (Atualizado com Cores e Tradução) ---
+# --- GERADOR DE HTML ---
 def generate_html_report(project_name, metrics, tasks_df):
-    # Traduz e formata os dados antes de gerar o HTML
     rows_html = ""
-    
-    # Ordena por data
     tasks_df = tasks_df.sort_values(by="end_date")
 
     for _, row in tasks_df.iterrows():
-        # Formatação de Datas
         start_fmt = pd.to_datetime(row['start_date']).strftime('%d/%m/%Y') if row['start_date'] else "-"
         end_fmt = pd.to_datetime(row['end_date']).strftime('%d/%m/%Y') if row['end_date'] else "-"
         
-        # Definição de Cores por Status
-        status_color = "#f9f9f9" # Padrão
-        status_text_color = "#333"
+        status_color = "#f9f9f9"
         badge_style = ""
-        
         if row['status'] == 'Concluído':
-            status_color = "#dff0d8" # Verde claro background
+            status_color = "#dff0d8"
             badge_style = "color: #3c763d; font-weight: bold;"
         elif row['status'] == 'Em Andamento':
-            status_color = "#fcf8e3" # Amarelo claro background
+            status_color = "#fcf8e3"
             badge_style = "color: #8a6d3b; font-weight: bold;"
         elif row['status'] == 'Não Iniciado':
-            status_color = "#f2dede" # Vermelho claro background
+            status_color = "#f2dede"
             badge_style = "color: #a94442; font-weight: bold;"
 
         rows_html += f"""
@@ -197,37 +211,23 @@ def generate_html_report(project_name, metrics, tasks_df):
             .metric-box {{ background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 8px; min-width: 150px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }}
             .metric-lbl {{ font-size: 14px; color: #666; }}
             .metric-val {{ font-size: 28px; font-weight: bold; color: #ff4b4b; margin-top: 5px; }}
-            
             table {{ border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; }}
             th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; }}
             th {{ background-color: #0E1117; color: white; }}
         </style>
     </head>
     <body>
-        <h1>🚀 Relatório de Projeto: {project_name}</h1>
-        <p><strong>Data de Geração:</strong> {datetime.now().strftime('%d/%m/%Y às %H:%M')}</p>
-        
+        <h1>🚀 Relatório: {project_name}</h1>
+        <p><strong>Gerado em:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
         <div class="metrics-container">
-            <div class="metric-box"><div class="metric-lbl">Total de Atividades</div><div class="metric-val">{metrics['total']}</div></div>
+            <div class="metric-box"><div class="metric-lbl">Total</div><div class="metric-val">{metrics['total']}</div></div>
             <div class="metric-box"><div class="metric-lbl">Concluídas</div><div class="metric-val">{metrics['done']} ({metrics['perc']}%)</div></div>
-            <div class="metric-box"><div class="metric-lbl">Previsão de Término</div><div class="metric-val">{metrics['forecast']}</div></div>
+            <div class="metric-box"><div class="metric-lbl">Previsão</div><div class="metric-val">{metrics['forecast']}</div></div>
         </div>
-
-        <h2>Detalhamento das Atividades</h2>
+        <h2>Detalhamento</h2>
         <table>
-            <thead>
-                <tr>
-                    <th>Atividade</th>
-                    <th>Status</th>
-                    <th>Progresso</th>
-                    <th>Responsável</th>
-                    <th>Início</th>
-                    <th>Prazo Final</th>
-                </tr>
-            </thead>
-            <tbody>
-                {rows_html}
-            </tbody>
+            <thead><tr><th>Atividade</th><th>Status</th><th>Progresso</th><th>Resp.</th><th>Início</th><th>Fim</th></tr></thead>
+            <tbody>{rows_html}</tbody>
         </table>
     </body>
     </html>
@@ -238,13 +238,11 @@ def generate_html_report(project_name, metrics, tasks_df):
 
 if "current_user" not in st.session_state: st.session_state["current_user"] = "Visitante"
 
-# Carrega Dados Iniciais
 projects_df = get_projects()
 all_members_list = get_members()
 
-# --- HEADER ---
+# HEADER
 col_header_title, col_header_btn = st.columns([3, 1])
-
 with col_header_title:
     st.title("🚀 Gestão Visual AURA")
 
@@ -267,7 +265,6 @@ if not projects_df.empty:
     project_pin = project_data["pin_code"]
     tasks_df = get_tasks(project_id)
 
-    # BOTÃO HTML (Topo Direito)
     with col_header_btn:
         st.write("") 
         if not tasks_df.empty:
@@ -277,16 +274,8 @@ if not projects_df.empty:
             t_max = pd.to_datetime(tasks_df['end_date'], errors='coerce').max()
             t_fore = t_max.strftime("%d/%m/%Y") if pd.notnull(t_max) else "N/A"
             metrics = {'total': t_total, 'done': t_done, 'perc': t_perc, 'forecast': t_fore}
-            
             html_data = generate_html_report(selected_project_name, metrics, tasks_df)
-            
-            st.download_button(
-                label="📄 Relatório HTML",
-                data=html_data,
-                file_name=f"Relatorio_{selected_project_name}.html",
-                mime="text/html",
-                use_container_width=True
-            )
+            st.download_button("📄 Relatório HTML", html_data, f"Relatorio_{selected_project_name}.html", "text/html", use_container_width=True)
 
 st.divider()
 
@@ -294,7 +283,6 @@ st.divider()
 if selected_project_name and not tasks_df.empty:
     tasks_df['end_date'] = pd.to_datetime(tasks_df['end_date'], errors='coerce')
     
-    # Métricas
     total_tasks = len(tasks_df)
     completed_tasks = len(tasks_df[tasks_df['progress'] == 100])
     perc_conclusao = (completed_tasks / total_tasks) * 100 if total_tasks > 0 else 0
@@ -309,8 +297,8 @@ if selected_project_name and not tasks_df.empty:
     st.progress(int(tasks_df['progress'].mean()), text="Progresso Global do Projeto")
     st.markdown("---")
     
-    # --- ÁREA DE CONSULTORES (NOVO POPOVER) ---
-    st.subheader("Consultores (Clique para Detalhes)")
+    # --- ÁREA DE CONSULTORES (NOVO DESIGN HARMÔNICO) ---
+    st.subheader("Consultores")
     
     unique_owners = set()
     for owner_str in tasks_df["owner_name"].dropna().unique():
@@ -319,15 +307,17 @@ if selected_project_name and not tasks_df.empty:
     sorted_owners = sorted(list(unique_owners))
     
     if sorted_owners:
+        # Define colunas (8 por linha)
         cols_avatar = st.columns(min(len(sorted_owners), 8))
         
         for i, owner_name in enumerate(sorted_owners):
+            # Quebra de linha se passar de 8
             col_idx = i % 8
             if i > 0 and i % 8 == 0:
                 cols_avatar = st.columns(min(len(sorted_owners) - i, 8))
             
             with cols_avatar[col_idx]:
-                # 1. Imagem Redonda (Visual Apenas)
+                # 1. Imagem Centralizada (HTML)
                 img_tag = get_image_base64_html(owner_name)
                 
                 st.markdown('<div class="avatar-container">', unsafe_allow_html=True)
@@ -335,33 +325,36 @@ if selected_project_name and not tasks_df.empty:
                     st.markdown(img_tag, unsafe_allow_html=True)
                 else:
                     emoji = DEFAULT_EMOJIS[i % len(DEFAULT_EMOJIS)]
-                    st.markdown(f'<div style="font-size: 40px;">{emoji}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="font-size: 50px;">{emoji}</div>', unsafe_allow_html=True)
                 st.markdown('</div>', unsafe_allow_html=True)
                 
-                # 2. Botão Popover (Abaixo da Imagem)
+                # 2. Botão Popover (Nome Abaixo da Imagem)
                 short_name = owner_name.split(" ")[0]
                 
-                # Popover: Substitui o antigo filtro
-                with st.popover(f"📂 {short_name}", use_container_width=True):
-                    # Cabeçalho do Popover
+                # O botão do popover agora tem apenas o nome, e o CSS cuida de deixá-lo bonito
+                with st.popover(short_name, use_container_width=True):
                     st.markdown(f"### Atividades de {owner_name}")
                     
-                    # Foto Grande
+                    # Foto Grande dentro do Detalhe
                     img_path = get_image_path(owner_name)
                     if img_path:
-                        st.image(img_path, width=200)
+                        c_img, c_info = st.columns([1, 2])
+                        with c_img: st.image(img_path, width=120)
+                        with c_info: 
+                            st.write(f"**Total de Tarefas:** {len(tasks_df[tasks_df['owner_name'].str.contains(owner_name, na=False, case=False)])}")
+                    
+                    st.divider()
                     
                     # Tabela Filtrada
                     user_tasks = tasks_df[tasks_df['owner_name'].str.contains(owner_name, na=False, case=False)].copy()
                     
                     if not user_tasks.empty:
-                        # Seleciona colunas relevantes para o popover
                         display_df = user_tasks[['title', 'status', 'progress', 'end_date']].copy()
                         display_df['end_date'] = display_df['end_date'].dt.strftime('%d/%m/%Y')
-                        display_df.columns = ['Atividade', 'Status', '%', 'Prazo'] # Renomeia para ficar bonito
+                        display_df.columns = ['Atividade', 'Status', '%', 'Prazo']
                         st.dataframe(display_df, hide_index=True, use_container_width=True)
                     else:
-                        st.info("Nenhuma atividade encontrada neste projeto.")
+                        st.info("Sem pendências.")
 
     st.markdown("---")
 
@@ -373,7 +366,6 @@ if selected_project_name and not tasks_df.empty:
     c_doing.markdown('<h3 class="header-doing">🔨 Execução</h3>', unsafe_allow_html=True)
     c_done.markdown('<h3 class="header-done">✅ Concluído</h3>', unsafe_allow_html=True)
 
-    # Exibe todas as tarefas (Filtro global removido em favor do Popover individual)
     filtered_df = tasks_df.sort_values(by="end_date", ascending=True)
 
     for index, task in filtered_df.iterrows():
