@@ -9,24 +9,24 @@ import base64
 # --- Configuração da Página ---
 st.set_page_config(page_title="Gestão Kanban AURA", page_icon="🚀", layout="wide")
 
-# --- CSS Personalizado (Visual "Premium" + Correções) ---
+# --- CSS Personalizado ---
 st.markdown("""
 <style>
-    /* 1. AUMENTAR LARGURA DO POPOVER */
+    /* AUMENTAR LARGURA DO POPOVER */
     [data-testid="stPopoverBody"] {
         min-width: 600px !important;
         max-width: 800px !important;
     }
 
-    /* 2. CONTAINER COM SCROLL PARA A TABELA */
+    /* CONTAINER COM SCROLL PARA A TABELA HTML */
     .table-wrapper {
-        max-height: 350px; /* Altura máxima antes de rolar */
-        overflow-y: auto;  /* Barra de rolagem se necessário */
+        max-height: 350px;
+        overflow-y: auto;
         border: 1px solid #eee;
         border-radius: 8px;
     }
 
-    /* 3. ESTILO DA TABELA */
+    /* TABELA */
     .popover-table {
         width: 100%;
         border-collapse: collapse;
@@ -40,9 +40,7 @@ st.markdown("""
         padding: 10px;
         text-align: left;
         border-bottom: 2px solid #ddd;
-        position: sticky; /* Cabeçalho fixo ao rolar */
-        top: 0;
-        z-index: 1;
+        position: sticky; top: 0; z-index: 1;
     }
     .popover-table td {
         padding: 8px 10px;
@@ -51,37 +49,24 @@ st.markdown("""
         background-color: white;
     }
     
-    /* 4. BADGES E BARRA DE PROGRESSO */
+    /* BADGES E BARRA DE PROGRESSO */
     .badge {
-        padding: 3px 8px;
-        border-radius: 10px;
-        font-weight: bold;
-        font-size: 10px;
-        text-transform: uppercase;
-        color: white;
-        display: inline-block;
-        min-width: 70px;
-        text-align: center;
+        padding: 3px 8px; border-radius: 10px; font-weight: bold; font-size: 10px;
+        text-transform: uppercase; color: white; display: inline-block; min-width: 70px; text-align: center;
     }
     .bg-todo { background-color: #d9534f; }
     .bg-doing { background-color: #f0ad4e; }
     .bg-done { background-color: #5cb85c; }
 
     .prog-track {
-        background-color: #e9ecef;
-        border-radius: 8px;
-        height: 6px;
-        width: 100%;
-        min-width: 80px;
-        display: block;
+        background-color: #e9ecef; border-radius: 8px; height: 6px; width: 100%; min-width: 80px; display: block;
     }
     .prog-fill {
-        height: 100%;
-        border-radius: 8px;
+        height: 100%; border-radius: 8px;
         background: linear-gradient(90deg, #ff4b4b 0%, #f0ad4e 60%, #5cb85c 100%);
     }
 
-    /* 5. OUTROS ESTILOS GERAIS */
+    /* ESTILOS GERAIS */
     [data-testid="column"] { display: flex; flex-direction: column; alignItems: center; justifyContent: flex-start; }
     .avatar-img { border-radius: 50%; width: 75px; height: 75px; object-fit: cover; border: 2px solid #f0f2f6; box-shadow: 0 3px 6px rgba(0,0,0,0.1); margin-bottom: 5px; transition: transform 0.2s; }
     .avatar-img:hover { transform: scale(1.08); border-color: #ff4b4b; }
@@ -92,9 +77,11 @@ st.markdown("""
     div.stPopover button:hover { background-color: #f0f2f6; color: #ff4b4b; border-color: #eee; }
     
     .mini-avatar { border-radius: 50%; width: 25px; height: 25px; object-fit: cover; border: 1px solid #ccc; verticalAlign: middle; marginRight: 5px; }
-    .header-todo {color: #d9534f; border-bottom: 3px solid #d9534f; padding-bottom: 5px;}
-    .header-doing {color: #f0ad4e; border-bottom: 3px solid #f0ad4e; padding-bottom: 5px;}
-    .header-done {color: #5cb85c; border-bottom: 3px solid #5cb85c; padding-bottom: 5px;}
+    
+    /* Cabeçalhos Coloridos */
+    .header-todo {color: #d9534f; border-bottom: 3px solid #d9534f; padding-bottom: 5px; margin-bottom: 10px;}
+    .header-doing {color: #f0ad4e; border-bottom: 3px solid #f0ad4e; padding-bottom: 5px; margin-bottom: 10px;}
+    .header-done {color: #5cb85c; border-bottom: 3px solid #5cb85c; padding-bottom: 5px; margin-bottom: 10px;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -167,9 +154,8 @@ def update_full_task(task_id, title, desc, owner_list, start_d, end_d, progress)
 def custom_progress_bar(value, color):
     return f"""<div style="width: 100%; background-color: #e0e0e0; border-radius: 5px; height: 10px; margin-top: 5px; margin-bottom: 5px;"><div style="width: {value}%; background-color: {color}; height: 10px; border-radius: 5px;"></div></div>"""
 
-# --- GERA TABELA HTML PARA O POPOVER (CORRIGIDO) ---
+# --- GERA TABELA HTML PARA O POPOVER ---
 def generate_popover_table(df_user):
-    # ATENÇÃO: String sem indentação para evitar bug de código
     html = """
 <div class="table-wrapper">
 <table class="popover-table">
@@ -190,7 +176,6 @@ def generate_popover_table(df_user):
         
         prazo = pd.to_datetime(row['end_date']).strftime('%d/%m') if row['end_date'] else "-"
         
-        # Monta a linha sem indentação excessiva
         html += f"""
     <tr>
         <td style="font-weight:500;">{row['title']}</td>
@@ -304,7 +289,6 @@ if selected_project_name and not tasks_df.empty:
                 
                 short_name = owner_name.split(" ")[0]
                 with st.popover(short_name, use_container_width=False):
-                    # Cabeçalho do Popover
                     c_img, c_info = st.columns([1, 4])
                     img_path = get_image_path(owner_name)
                     with c_img:
@@ -313,30 +297,44 @@ if selected_project_name and not tasks_df.empty:
                         user_tasks = tasks_df[tasks_df['owner_name'].str.contains(owner_name, na=False, case=False)].copy()
                         st.markdown(f"### {owner_name}")
                         st.caption(f"Responsável por {len(user_tasks)} atividades.")
-
                     st.markdown("---")
-                    
                     if not user_tasks.empty:
-                        # GERA A TABELA HTML PERSONALIZADA (Com Cores e Degradê)
                         table_html = generate_popover_table(user_tasks)
                         st.markdown(table_html, unsafe_allow_html=True)
-                    else:
-                        st.info("Sem pendências.")
+                    else: st.info("Sem pendências.")
 
     st.markdown("---")
 
-    # --- KANBAN BOARD ---
-    c_todo, c_doing, c_done = st.columns(3)
-    cols = {"Não Iniciado": c_todo, "Em Andamento": c_doing, "Concluído": c_done}
-    c_todo.markdown('<h3 class="header-todo">📝 A Fazer</h3>', unsafe_allow_html=True)
-    c_doing.markdown('<h3 class="header-doing">🔨 Execução</h3>', unsafe_allow_html=True)
-    c_done.markdown('<h3 class="header-done">✅ Concluído</h3>', unsafe_allow_html=True)
-
+    # --- KANBAN BOARD (COM CONTADORES E SCROLL) ---
+    
+    # Ordenação
     filtered_df = tasks_df.sort_values(by="end_date", ascending=True)
+
+    # Contagem para o Cabeçalho
+    count_todo = len(filtered_df[filtered_df["status"] == "Não Iniciado"])
+    count_doing = len(filtered_df[filtered_df["status"] == "Em Andamento"])
+    count_done = len(filtered_df[filtered_df["status"] == "Concluído"])
+
+    c_todo, c_doing, c_done = st.columns(3)
+    
+    # Cabeçalhos com Contagem
+    c_todo.markdown(f'<h3 class="header-todo">📝 A Fazer ({count_todo})</h3>', unsafe_allow_html=True)
+    c_doing.markdown(f'<h3 class="header-doing">🔨 Execução ({count_doing})</h3>', unsafe_allow_html=True)
+    c_done.markdown(f'<h3 class="header-done">✅ Concluído ({count_done})</h3>', unsafe_allow_html=True)
+    
+    # Mapeamento de Containers Scrolláveis
+    # height=600px exibe aprox 5 a 6 cartões. O resto fica no scroll.
+    with c_todo: container_todo = st.container(height=600, border=False)
+    with c_doing: container_doing = st.container(height=600, border=False)
+    with c_done: container_done = st.container(height=600, border=False)
+
+    cols = {"Não Iniciado": container_todo, "Em Andamento": container_doing, "Concluído": container_done}
 
     for index, task in filtered_df.iterrows():
         status = task["status"]
         if status not in cols: status = "Não Iniciado"
+        
+        # Insere o cartão dentro do container scrollável correto
         with cols[status]:
             container = st.container(border=True)
             with container:
