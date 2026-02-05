@@ -9,55 +9,77 @@ import base64
 # --- Configuração da Página ---
 st.set_page_config(page_title="Gestão Kanban AURA", page_icon="🚀", layout="wide")
 
-# --- CSS Personalizado (Estilos) ---
+# --- CSS Personalizado (Estilos Refinados) ---
 st.markdown("""
 <style>
-    /* Centraliza a coluna do Avatar */
-    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
+    /* 1. CENTRALIZAÇÃO TOTAL DAS COLUNAS DE CONSULTORES */
+    /* Isso força todo o conteúdo dentro das colunas de consultores a ficar centralizado */
+    [data-testid="column"] {
+        display: flex;
+        flex-direction: column;
         align-items: center;
+        justify-content: flex-start;
     }
 
-    /* Estilo da Imagem Redonda (Avatar) */
+    /* 2. ESTILO DA IMAGEM (AVATAR) */
     .avatar-img {
         border-radius: 50%;
-        width: 80px; /* Aumentei um pouco para destaque */
-        height: 80px;
+        width: 75px; 
+        height: 75px;
         object-fit: cover;
-        border: 3px solid #f0f2f6; /* Borda suave */
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 8px; /* Espaço entre foto e botão */
+        border: 2px solid #f0f2f6;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        margin-bottom: 5px; /* Pouco espaço entre foto e nome */
         transition: transform 0.2s;
     }
     .avatar-img:hover {
-        transform: scale(1.05);
+        transform: scale(1.08);
         border-color: #ff4b4b;
     }
     
-    /* Centralizar Container da Imagem */
+    /* Container para garantir que a imagem não estique */
     .avatar-container {
         display: flex;
         justify-content: center;
         width: 100%;
     }
 
-    /* Estilizando o Botão do Popover (Nome) para parecer clean */
+    /* 3. ESTILO DO BOTÃO (NOME) */
+    /* O segredo para o botão ficar pequeno e centralizado */
+    div.stPopover {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+    
     div.stPopover button {
         background-color: transparent;
-        border: 1px solid #e6e6e6;
-        color: #31333F;
+        border: 1px solid transparent; /* Borda invisível por padrão */
+        color: #555; /* Cor do texto mais suave */
+        font-size: 13px; /* Texto um pouco menor */
         font-weight: 600;
-        width: 100%;
-        border-radius: 20px;
-        padding: 2px 10px;
-        transition: all 0.3s;
+        
+        width: auto !important; /* CRUCIAL: Tamanho automático baseado no texto */
+        min-width: 60px;
+        padding: 2px 10px; /* Padding menor */
+        border-radius: 15px; /* Formato pílula */
+        
+        transition: all 0.2s;
+        margin-top: -5px; /* Puxa um pouco pra cima, perto da foto */
     }
+    
     div.stPopover button:hover {
-        border-color: #ff4b4b;
+        background-color: #f0f2f6;
         color: #ff4b4b;
-        background-color: #fff;
+        border-color: #eee;
+    }
+    
+    /* Remove setinha padrão do botão do popover se houver */
+    div.stPopover button p {
+        font-size: 13px;
     }
 
-    /* Mini Avatar dentro do Card */
+    /* OUTROS ESTILOS (Kanban, etc) */
     .mini-avatar {
         border-radius: 50%;
         width: 25px;
@@ -68,7 +90,6 @@ st.markdown("""
         margin-right: 5px;
     }
 
-    /* Cores das Colunas do Kanban */
     .header-todo {color: #d9534f; border-bottom: 3px solid #d9534f; padding-bottom: 5px;}
     .header-doing {color: #f0ad4e; border-bottom: 3px solid #f0ad4e; padding-bottom: 5px;}
     .header-done {color: #5cb85c; border-bottom: 3px solid #5cb85c; padding-bottom: 5px;}
@@ -99,7 +120,7 @@ def init_connection():
 
 supabase = init_connection()
 
-# --- Funções de Imagem ---
+# --- Funções Auxiliares ---
 def get_image_path(name):
     filename = IMAGE_MAP.get(name) or IMAGE_MAP.get(name.split(" ")[0])
     if filename and os.path.exists(filename):
@@ -128,7 +149,6 @@ def get_mini_avatar_html(owner_string):
             html += "👤"
     return html
 
-# --- Funções de Dados ---
 def get_members():
     response = supabase.table("members").select("*").order("name").execute()
     df = pd.DataFrame(response.data)
@@ -162,15 +182,12 @@ def custom_progress_bar(value, color):
     </div>
     """
 
-# --- GERADOR DE HTML ---
 def generate_html_report(project_name, metrics, tasks_df):
     rows_html = ""
     tasks_df = tasks_df.sort_values(by="end_date")
-
     for _, row in tasks_df.iterrows():
         start_fmt = pd.to_datetime(row['start_date']).strftime('%d/%m/%Y') if row['start_date'] else "-"
         end_fmt = pd.to_datetime(row['end_date']).strftime('%d/%m/%Y') if row['end_date'] else "-"
-        
         status_color = "#f9f9f9"
         badge_style = ""
         if row['status'] == 'Concluído':
@@ -185,56 +202,19 @@ def generate_html_report(project_name, metrics, tasks_df):
 
         rows_html += f"""
         <tr style="background-color: {status_color};">
-            <td>{row['title']}</td>
-            <td style="{badge_style}">{row['status']}</td>
-            <td>
-                <div style="width: 100px; background: #ddd; height: 10px; border-radius:5px;">
-                    <div style="width:{row['progress']}%; background: #4CAF50; height: 10px; border-radius:5px;"></div>
-                </div>
-                <small>{row['progress']}%</small>
-            </td>
-            <td>{row['owner_name']}</td>
-            <td>{start_fmt}</td>
-            <td>{end_fmt}</td>
+            <td>{row['title']}</td><td style="{badge_style}">{row['status']}</td>
+            <td>{row['progress']}%</td><td>{row['owner_name']}</td><td>{start_fmt}</td><td>{end_fmt}</td>
         </tr>
         """
-
     html_template = f"""
-    <html>
-    <head>
-        <title>Status - {project_name}</title>
-        <meta charset="UTF-8">
-        <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; padding: 20px; }}
-            h1 {{ color: #0E1117; border-bottom: 2px solid #eee; padding-bottom: 10px; }}
-            .metrics-container {{ display: flex; gap: 20px; margin-bottom: 30px; margin-top: 20px; }}
-            .metric-box {{ background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 8px; min-width: 150px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }}
-            .metric-lbl {{ font-size: 14px; color: #666; }}
-            .metric-val {{ font-size: 28px; font-weight: bold; color: #ff4b4b; margin-top: 5px; }}
-            table {{ border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; }}
-            th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; }}
-            th {{ background-color: #0E1117; color: white; }}
-        </style>
-    </head>
-    <body>
-        <h1>🚀 Relatório: {project_name}</h1>
-        <p><strong>Gerado em:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
-        <div class="metrics-container">
-            <div class="metric-box"><div class="metric-lbl">Total</div><div class="metric-val">{metrics['total']}</div></div>
-            <div class="metric-box"><div class="metric-lbl">Concluídas</div><div class="metric-val">{metrics['done']} ({metrics['perc']}%)</div></div>
-            <div class="metric-box"><div class="metric-lbl">Previsão</div><div class="metric-val">{metrics['forecast']}</div></div>
-        </div>
-        <h2>Detalhamento</h2>
-        <table>
-            <thead><tr><th>Atividade</th><th>Status</th><th>Progresso</th><th>Resp.</th><th>Início</th><th>Fim</th></tr></thead>
-            <tbody>{rows_html}</tbody>
-        </table>
-    </body>
-    </html>
+    <html><head><style>body{{font-family:sans-serif;}} table{{width:100%;border-collapse:collapse;}} th,td{{border:1px solid #ddd;padding:8px;}} th{{background:#0E1117;color:white;}} .box{{background:#f0f2f6;padding:15px;margin-right:10px;display:inline-block;border-radius:8px;}}</style></head>
+    <body><h1>{project_name}</h1><p>Gerado em: {datetime.now().strftime('%d/%m/%Y')}</p>
+    <div style="margin-bottom:20px;"><div class="box">Total: <b>{metrics['total']}</b></div><div class="box">Concluído: <b>{metrics['done']} ({metrics['perc']}%)</b></div><div class="box">Previsão: <b>{metrics['forecast']}</b></div></div>
+    <table><thead><tr><th>Atividade</th><th>Status</th><th>%</th><th>Resp.</th><th>Início</th><th>Fim</th></tr></thead><tbody>{rows_html}</tbody></table></body></html>
     """
     return html_template
 
-# --- INÍCIO DA INTERFACE ---
+# --- LÓGICA PRINCIPAL ---
 
 if "current_user" not in st.session_state: st.session_state["current_user"] = "Visitante"
 
@@ -279,7 +259,6 @@ if not projects_df.empty:
 
 st.divider()
 
-# --- DASHBOARD ---
 if selected_project_name and not tasks_df.empty:
     tasks_df['end_date'] = pd.to_datetime(tasks_df['end_date'], errors='coerce')
     
@@ -297,7 +276,7 @@ if selected_project_name and not tasks_df.empty:
     st.progress(int(tasks_df['progress'].mean()), text="Progresso Global do Projeto")
     st.markdown("---")
     
-    # --- ÁREA DE CONSULTORES (NOVO DESIGN HARMÔNICO) ---
+    # --- ÁREA DE CONSULTORES (AJUSTADA) ---
     st.subheader("Consultores")
     
     unique_owners = set()
@@ -307,19 +286,19 @@ if selected_project_name and not tasks_df.empty:
     sorted_owners = sorted(list(unique_owners))
     
     if sorted_owners:
-        # Define colunas (8 por linha)
+        # Colunas menores para ficarem mais juntos (máximo 8 por linha)
         cols_avatar = st.columns(min(len(sorted_owners), 8))
         
         for i, owner_name in enumerate(sorted_owners):
-            # Quebra de linha se passar de 8
             col_idx = i % 8
             if i > 0 and i % 8 == 0:
                 cols_avatar = st.columns(min(len(sorted_owners) - i, 8))
             
             with cols_avatar[col_idx]:
-                # 1. Imagem Centralizada (HTML)
+                # 1. Imagem
                 img_tag = get_image_base64_html(owner_name)
                 
+                # HTML Container para a imagem
                 st.markdown('<div class="avatar-container">', unsafe_allow_html=True)
                 if img_tag:
                     st.markdown(img_tag, unsafe_allow_html=True)
@@ -328,26 +307,24 @@ if selected_project_name and not tasks_df.empty:
                     st.markdown(f'<div style="font-size: 50px;">{emoji}</div>', unsafe_allow_html=True)
                 st.markdown('</div>', unsafe_allow_html=True)
                 
-                # 2. Botão Popover (Nome Abaixo da Imagem)
+                # 2. Botão/Nome (Centralizado e Pequeno via CSS)
                 short_name = owner_name.split(" ")[0]
                 
-                # O botão do popover agora tem apenas o nome, e o CSS cuida de deixá-lo bonito
-                with st.popover(short_name, use_container_width=True):
+                # O botão aqui herdará o estilo do CSS "div.stPopover button" definido no topo
+                with st.popover(short_name, use_container_width=False):
                     st.markdown(f"### Atividades de {owner_name}")
                     
-                    # Foto Grande dentro do Detalhe
                     img_path = get_image_path(owner_name)
                     if img_path:
                         c_img, c_info = st.columns([1, 2])
                         with c_img: st.image(img_path, width=120)
                         with c_info: 
-                            st.write(f"**Total de Tarefas:** {len(tasks_df[tasks_df['owner_name'].str.contains(owner_name, na=False, case=False)])}")
+                            user_tasks_count = len(tasks_df[tasks_df['owner_name'].str.contains(owner_name, na=False, case=False)])
+                            st.write(f"**Tarefas:** {user_tasks_count}")
                     
                     st.divider()
                     
-                    # Tabela Filtrada
                     user_tasks = tasks_df[tasks_df['owner_name'].str.contains(owner_name, na=False, case=False)].copy()
-                    
                     if not user_tasks.empty:
                         display_df = user_tasks[['title', 'status', 'progress', 'end_date']].copy()
                         display_df['end_date'] = display_df['end_date'].dt.strftime('%d/%m/%Y')
@@ -420,7 +397,6 @@ if selected_project_name and not tasks_df.empty:
                             time.sleep(0.5)
                             st.rerun()
 
-# --- RODAPÉ ---
 st.divider()
 st.subheader("🛠️ Adicionar / Configurar")
 tab1, tab2, tab3 = st.tabs(["➕ Tarefa", "⚙️ Projeto", "🆕 Novo Projeto"])
